@@ -50,7 +50,7 @@ TOOLS = [
 
 async def crawlear(url: str) -> str:
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=25) as client:
             resp = await client.post(
                 f"{CRAWL4AI_URL}/crawl",
                 headers={"Authorization": f"Bearer {CRAWL4AI_TOKEN}"},
@@ -60,9 +60,14 @@ async def crawlear(url: str) -> str:
                     "bypass_cache": True,
                     "crawler_params": {
                         "headless": True,
-                        "page_timeout": 30000
+                        "page_timeout": 20000,
+                        "wait_for": "domcontentloaded"
+                    },
+                    "content_filter": {
+                        "type": "PruningContentFilter",
+                        "threshold": 0.4
                     }
-                }
+                }                
             )
             data = resp.json()
             if data.get("results") and len(data["results"]) > 0:
