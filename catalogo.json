@@ -1,0 +1,455 @@
+{
+  "updated_at": "2026-05-27",
+  "total": 64,
+  "fuente": "https://ecoglobalexpeditions.com/all/",
+  "expediciones": [
+    {
+      "id": 1,
+      "nombre": "Caminata Ecológica Ruta Merrell Guatavita",
+      "categoria": "caminatas",
+      "descripcion": "Formato de exploración donde el camino es desconocido. Nuestros guías y senderistas se unen en una sola misión: descifrar el terreno paso a paso. Caminata fuerte, larga y sin ensayos previos.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-ruta-merrell-guatavita/"
+    },
+    {
+      "id": 2,
+      "nombre": "Caminata Ecológica Cucunubá – Suesca",
+      "categoria": "caminatas",
+      "descripcion": "Recorre Cucunubá, bello pueblito colonial 'La niña bonita del valle de Ubaté', con casas blancas y verdes, calles empedradas y clima frío.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-cucunuba-suesca/"
+    },
+    {
+      "id": 3,
+      "nombre": "Caminata Ecológica Tominé – Tocancipá",
+      "categoria": "caminatas",
+      "descripcion": "Hermosa vista de un maravilloso bosque Alto Andino.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-tomine-tocancipa/"
+    },
+    {
+      "id": 4,
+      "nombre": "Caminata Ecológica El Camino de los Cipreses Tenza – Guateque",
+      "categoria": "caminatas",
+      "descripcion": "Caminata exigente en tierra templada, en ascenso, por cafetales, caminos de piedra, antiguas haciendas cafeteras, flores y frutales.",
+      "url": "https://ecoglobalexpeditions.com/caminata_ecologica-el_camino-de_los_cipreses/"
+    },
+    {
+      "id": 5,
+      "nombre": "Caminata Ascenso Cerro Tusa en Venecia (Antioquia)",
+      "categoria": "caminatas",
+      "descripcion": "Tierras con gran biodiversidad habitadas originalmente por las etnias indígenas Titiribíes y Sinifanaes.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ascenso-cerro-tusa-en-venecia-antioquia/"
+    },
+    {
+      "id": 6,
+      "nombre": "Caminata Ecológica Carolina del Príncipe – Embalse Troneras (Antioquia)",
+      "categoria": "caminatas",
+      "descripcion": "Camino de herradura bordeado de sietecueros.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-carolina-del-principe-embalse-troneras-antioquia/"
+    },
+    {
+      "id": 7,
+      "nombre": "Caminata Ecológica Camino Real Fusa – El Peñón",
+      "categoria": "caminatas",
+      "descripcion": "Camino empedrado muy antiguo, con meta intermedia apta para todos y meta final para los más exigentes.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-camino-real-fusa-el-penon/"
+    },
+    {
+      "id": 8,
+      "nombre": "Caminata Ecológica Peña Negra – Alto del Mohan",
+      "categoria": "caminatas",
+      "descripcion": "Tierra caliente, quebradas, frutales y flores, cafetales y platanales. Caminata en ascenso con algunos descensos cortos.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-pena-negra-alto-del-mohan/"
+    },
+    {
+      "id": 9,
+      "nombre": "Caminata Ecológica Charco La Cazuela y Cascada La Isleta – San Rafael Antioquia",
+      "categoria": "caminatas",
+      "descripcion": "Entre aguas color esmeralda de charcos y cascadas. Avistamiento de aves y pequeños mamíferos, incluyendo titís.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-charco-la-cazuela-y-cascada-la-isleta-san-rafael-antioquia/"
+    },
+    {
+      "id": 10,
+      "nombre": "Caminata Ecológica Supatá – El Tablazo Camino del Abuelo",
+      "categoria": "caminatas",
+      "descripcion": "En las curvas del cerro El Tablazo a 3.485 metros, los chibchas escondieron los tesoros de la Diosa Chía.",
+      "url": "https://ecoglobalexpeditions.com/caminata-supata_el-tablazo-camino-del-abuelo/"
+    },
+    {
+      "id": 11,
+      "nombre": "Expedición Páramo de Ocetá (Monguí Boyacá) en tu Vehículo",
+      "categoria": "destinos",
+      "descripcion": "El páramo más bello de Colombia, en tu propio vehículo.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-paramo-de-oceta-mongui-boyaca-en-tu-vehiculo/"
+    },
+    {
+      "id": 12,
+      "nombre": "Expedición Safari Hato El Encanto de Guanapalo 4 días",
+      "categoria": "destinos",
+      "descripcion": "Reserva natural privada de casi 9.000 hectáreas en los Llanos Orientales.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-safari-hato-el-encanto-de-guanapalo-4-dias/"
+    },
+    {
+      "id": 13,
+      "nombre": "Caminata Ecológica El Alto de La Raya – Concepción Antioquia",
+      "categoria": "caminatas",
+      "descripcion": "Atravesaremos hermosos paisajes hasta llegar a la Piedra del Ermitaño, descendiendo por antiguos caminos de herradura.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-el-alto-de-la-raya-concepcion-antioquia/"
+    },
+    {
+      "id": 14,
+      "nombre": "Caminata Ecológica Farallones de Lenguazaque – Cucunubá – Juaitoque",
+      "categoria": "caminatas",
+      "descripcion": "Grandes farallones rocosos con panorámica excepcional de los valles de Ubaté y Cucunubá.",
+      "url": "https://ecoglobalexpeditions.com/farallones-_de_lenguazaque-cucunuba-juaitoque/"
+    },
+    {
+      "id": 15,
+      "nombre": "Expedición Caquetá – La Puerta de Oro de la Amazonía",
+      "categoria": "destinos",
+      "descripcion": "Entre montañas imponentes, selvas vivas y el mágico piedemonte andino-amazónico. Biodiversidad, cultura y experiencias únicas.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-caqueta-la-puerta-de-oro-de-la-amazonia/"
+    },
+    {
+      "id": 16,
+      "nombre": "Caminata Ecológica Anzá – Quebrada La Puría",
+      "categoria": "caminatas",
+      "descripcion": "Anzá, Mirador del Río Cauca, con naturaleza exuberante y caminos de herradura para viajar en el tiempo.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-anza-quebrada-la-puria/"
+    },
+    {
+      "id": 17,
+      "nombre": "Caminata Ecológica En búsqueda del Oso Andino en Chingaza",
+      "categoria": "caminatas",
+      "descripcion": "Todo el día rodeados de paisaje sorprendente, respirando aire puro y siguiendo huellas y rastros del oso andino.",
+      "url": "https://ecoglobalexpeditions.com/en_busqueda_del_oso_andino-en_chingaza/"
+    },
+    {
+      "id": 18,
+      "nombre": "Expedición Cañones del Río Güejar, Guape y Maravillas 3 días (Verano)",
+      "categoria": "destinos",
+      "descripcion": "Los cañones del río Guape, Güejar y Maravillas, puerta de entrada a la Serranía de la Macarena. Temporada: diciembre a marzo.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-canones-del-rio-guejar-guape-y-maravillas-mesetas-meta-3-dias-verano-diciembre-marzo/"
+    },
+    {
+      "id": 19,
+      "nombre": "Travesía Camino de la Miel Palermo – Sotaquirá",
+      "categoria": "caminatas",
+      "descripcion": "Camino indígena muy antiguo por el que se transportó miel de caña a lomo de mula desde Santander.",
+      "url": "https://ecoglobalexpeditions.com/travesia-camino-de-la-miel-palermo-sotaquira/"
+    },
+    {
+      "id": 20,
+      "nombre": "Caminata Ecológica Nemocón – Suesca – Mirador del Sisga",
+      "categoria": "caminatas",
+      "descripcion": "Caminata exigente por pueblos emblemáticos de Cundinamarca.",
+      "url": "https://ecoglobalexpeditions.com/caminata_ecologica-nemocon_suesca-mirador_del_sisga/"
+    },
+    {
+      "id": 21,
+      "nombre": "Caminata Ecológica por el Camino del Indio en La Calera",
+      "categoria": "caminatas",
+      "descripcion": "Comienza en el corazón de La Calera, en su pintoresco Parque Principal, descubriendo historias de los primeros pobladores.",
+      "url": "https://ecoglobalexpeditions.com/el-camino-del-indio-en-la-calera/"
+    },
+    {
+      "id": 22,
+      "nombre": "Travesía por Caminos de Herradura Carmen de Viboral – La Unión",
+      "categoria": "caminatas",
+      "descripcion": "El Camino de la Madera, entre historia de progreso y paisajes inolvidables de Antioquia.",
+      "url": "https://ecoglobalexpeditions.com/travesia-por-caminos-de-herradura-carmen-de-viboral-la-union/"
+    },
+    {
+      "id": 23,
+      "nombre": "Curso de Fotografía de Naturaleza y Técnicas de Edición y Retoque",
+      "categoria": "actividades",
+      "descripcion": "Transforma tu pasión en arte: capta la esencia de la naturaleza con tu cámara y aprende técnicas de edición y retoque.",
+      "url": "https://ecoglobalexpeditions.com/curso-de-fotografia-de-naturaleza-y-tecnicas-de-edicion-y-retoque/"
+    },
+    {
+      "id": 24,
+      "nombre": "Caminata Ecológica Camino Real de la Aguadita",
+      "categoria": "caminatas",
+      "descripcion": "Camino empedrado muy antiguo desde Fusagasugá hasta la Aguadita. Muchos bosques y agua, apta para todos.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-camino-real-de-la-aguadita/"
+    },
+    {
+      "id": 25,
+      "nombre": "Caminata Ecológica Pueblo Viejo – Ubaque",
+      "categoria": "caminatas",
+      "descripcion": "Recorrido plano al inicio y en descenso, apreciando la vida campesina y altas montañas con escarpes rocosos.",
+      "url": "https://ecoglobalexpeditions.com/pueblo-viejo-ubaque/"
+    },
+    {
+      "id": 26,
+      "nombre": "Caminata Ecológica Suesca – Nemocón",
+      "categoria": "caminatas",
+      "descripcion": "Caminata apta para todos: niños, principiantes y familia.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-suesca-nemocon/"
+    },
+    {
+      "id": 27,
+      "nombre": "Caminata Ecológica La Unión – Fómeque",
+      "categoria": "caminatas",
+      "descripcion": "Senderos veredales en paralelo al valle del río Negro hasta la Chorrera de Chinia.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-la-union-fomeque/"
+    },
+    {
+      "id": 28,
+      "nombre": "Expedición Paramillo del Quindío",
+      "categoria": "destinos",
+      "descripcion": "Las faldas más hermosas del parque nacional, con geomorfología única y espléndidas arenas para amantes de la montaña.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-paramillo-del-quindio/"
+    },
+    {
+      "id": 29,
+      "nombre": "Caminata Ecológica Cogua – Neusa – Cogua",
+      "categoria": "caminatas",
+      "descripcion": "Ascenso desde el parque principal de Cogua hasta el embalse del Neusa, regresando en suave descenso por carreteras veredales.",
+      "url": "https://ecoglobalexpeditions.com/cogua-neusa-cogua/"
+    },
+    {
+      "id": 30,
+      "nombre": "Caminata Ecológica por el Sendero a Agualarga",
+      "categoria": "caminatas",
+      "descripcion": "Ascenso por camino de herradura desde Sasaima, pasando por la Finca de las Ventas de César Rincón hasta el municipio de Albán.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-por-el-sendero-a-agualarga/"
+    },
+    {
+      "id": 31,
+      "nombre": "Caminata Ecológica Bosques de Juaitoque (Cucunubá)",
+      "categoria": "caminatas",
+      "descripcion": "Vista espectacular del valle de Ubaté, la laguna de Cucunubá y la laguna de Fúquene.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-bosques-de-juaitoque-cucunuba/"
+    },
+    {
+      "id": 32,
+      "nombre": "Caminata Ecológica por el Camino Antiguo Cogua – Neusa",
+      "categoria": "caminatas",
+      "descripcion": "Ascenso desde Cogua hasta el embalse del Neusa por camino antiguo.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-por-el-camino-antiguo-cogua-neusa/"
+    },
+    {
+      "id": 33,
+      "nombre": "Expedición Páramo de Ocetá (Monguí Boyacá)",
+      "categoria": "destinos",
+      "descripcion": "El páramo más bello de Colombia, en Monguí Boyacá.",
+      "url": "https://ecoglobalexpeditions.com/paramo-de-oceta-mongui-boyaca-2/"
+    },
+    {
+      "id": 34,
+      "nombre": "Caminata Ecológica San Javier – Anolaima",
+      "categoria": "caminatas",
+      "descripcion": "Caminata exigente en clima cálido, la mayoría en ascenso.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-san-javier_anolaima/"
+    },
+    {
+      "id": 35,
+      "nombre": "Caminata Laguna de Iguaque (Villa de Leyva)",
+      "categoria": "caminatas",
+      "descripcion": "Fantástica caminata hacia la Laguna Sagrada de Iguaque en Villa de Leyva, una de las lagunas más sagradas para los Muiscas.",
+      "url": "https://ecoglobalexpeditions.com/caminata-laguna-de-iguaque-villa-de-leyva/"
+    },
+    {
+      "id": 36,
+      "nombre": "Expediciones al Desierto de la Tatacoa en tu Vehículo",
+      "categoria": "destinos",
+      "descripcion": "Cañón de la Culebra, Xilópalos, Los Hoyos, El Cuzco con tierra roja. Piscina natural y observación astronómica con telescopios.",
+      "url": "https://ecoglobalexpeditions.com/expediciones-al-desierto-de-la-tatacoa-en-tu-vehiculo/"
+    },
+    {
+      "id": 37,
+      "nombre": "Expediciones al Desierto de la Tatacoa desde Neiva",
+      "categoria": "destinos",
+      "descripcion": "Paisajes lunares, formaciones de colores asombrosos. Observación astronómica con telescopios profesionales.",
+      "url": "https://ecoglobalexpeditions.com/expediciones-al-desierto-de-la-tatacoa-desde-neiva/"
+    },
+    {
+      "id": 38,
+      "nombre": "Caminata Ecológica Parque Natural Chicaque",
+      "categoria": "caminatas",
+      "descripcion": "Ascenso por caminos indígenas en el Parque Natural Chicaque.",
+      "url": "https://ecoglobalexpeditions.com/caminata_ecologica-parque_natural-chicaque-cundinamarca/"
+    },
+    {
+      "id": 39,
+      "nombre": "Caminata Ecológica Alto de la Viga",
+      "categoria": "caminatas",
+      "descripcion": "Montañas con gran cantidad de vegetación nativa y grandiosa panorámica de Bogotá.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-alto-de-la-viga/"
+    },
+    {
+      "id": 40,
+      "nombre": "Guapi y Gorgona Entre Mar y Río con Avistamiento de Ballenas",
+      "categoria": "actividades",
+      "descripcion": "Avistamiento de ballenas Yubartas, uno de los espectáculos más asombrosos de la naturaleza.",
+      "url": "https://ecoglobalexpeditions.com/guapi_gorgona-entre_mar_y_rio-avistamiento_de_ballenas/"
+    },
+    {
+      "id": 41,
+      "nombre": "Caminata Ecológica Tena – Cascadas el Tambo, San Carlos y Velo de la Novia – Bojacá",
+      "categoria": "caminatas",
+      "descripcion": "Ascenso por caminos antiguos pasando por cascadas desde Tena hasta el municipio de Bojacá.",
+      "url": "https://ecoglobalexpeditions.com/tena_cascada_tambo-cascada_san_carlos_cascada_velonovia/"
+    },
+    {
+      "id": 42,
+      "nombre": "Expedición Alta Guajira y Macuira 4 días",
+      "categoria": "destinos",
+      "descripcion": "El Parque Nacional Natural La Macuira, lugar sagrado con importante significado espiritual para la comunidad Wayuu.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-alta-guajira-y-macuira-4-dias/"
+    },
+    {
+      "id": 43,
+      "nombre": "Expedición Alta Guajira, Mayapo, Flamencos y Cultura Wayuu 4 días",
+      "categoria": "destinos",
+      "descripcion": "Donde el desierto y el mar Caribe se entrelazan en un paisaje único en el extremo norte de Colombia.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-alta-guajira-mayapo-flamencos-y-cultura-wayuu-4-dias/"
+    },
+    {
+      "id": 44,
+      "nombre": "Expedición la Magia del Putumayo 4 días",
+      "categoria": "destinos",
+      "descripcion": "Al corazón del Putumayo, donde la naturaleza, cultura y aventura se fusionan en una experiencia inolvidable.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-la-magia-del-putumayo-4-dias/"
+    },
+    {
+      "id": 45,
+      "nombre": "Expedición Cañón del Río Güejar, Cafre, Guape y Maravillas 4 días (Verano)",
+      "categoria": "destinos",
+      "descripcion": "Los cañones del río Guape, Güejar y Cafre, puerta de entrada a la Serranía de la Macarena. Temporada: diciembre a marzo.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-canon-del-rio-guejar-cafre-guape-y-maravillas-4-dias-mesetas-meta-verano-diciembre-marzo/"
+    },
+    {
+      "id": 46,
+      "nombre": "Expedición Cañón del Río Güejar, Cascadas Telares de Cristal y Arenales 4 días (Invierno)",
+      "categoria": "destinos",
+      "descripcion": "El imponente cañón del río Güejar, puerta de entrada a la Serranía de la Macarena. Temporada: abril a noviembre.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-canon-del-rio-guejar-cascadas-telares-de-cristal-y-arenales-y-maravillas-4-dias-mesetas-meta-invierno-abril-noviembre/"
+    },
+    {
+      "id": 47,
+      "nombre": "Caminata Ecológica Morro Plata en El Retiro (Antioquia)",
+      "categoria": "caminatas",
+      "descripcion": "Vistas impresionantes del Cerro El Capiro, Valle San Nicolás, Montebello y El Retiro desde el mirador Morro Plata.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-morro-plata-en-el-retiro-antioquia/"
+    },
+    {
+      "id": 48,
+      "nombre": "Caminata Ecológica PNN Chingaza – Cuchillas de Siecha",
+      "categoria": "caminatas",
+      "descripcion": "Conjunto de tres lagunas en Guasca, Cundinamarca. En la antigua lengua Muisca, Siecha significa La Casa del Varón.",
+      "url": "https://ecoglobalexpeditions.com/caminata_ecologica-pnn_chingaza-cuchillas_de_siecha/"
+    },
+    {
+      "id": 49,
+      "nombre": "Expedición Cañón del Río Güejar, Cascada Arenales y Maravillas 3 días (Invierno)",
+      "categoria": "destinos",
+      "descripcion": "Los cañones del río Guape, Güejar y Cafre, puerta de entrada a la Serranía de la Macarena. Temporada: abril a noviembre.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-canon-del-rio-guejar-cascada-arenales-y-maravillas-3-dias-mesetas-meta-invierno-abril-noviembre/"
+    },
+    {
+      "id": 50,
+      "nombre": "Expedición Cañones del Río Güejar, Guape y Cafre 3 días (Verano)",
+      "categoria": "destinos",
+      "descripcion": "Los cañones del río Guape, Güejar y Cafre, puerta de entrada a la Serranía de la Macarena. Temporada: diciembre a marzo.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-canones-del-rio-guejar-guape-y-cafre-mesetas-meta-3-dias-verano-diciembre-marzo/"
+    },
+    {
+      "id": 51,
+      "nombre": "Pasadía Rafting en el Cañón del Río Güejar (Mesetas Meta)",
+      "categoria": "actividades",
+      "descripcion": "El imponente cañón del río Güejar, puerta de entrada a la Serranía de la Macarena. Rafting de un día.",
+      "url": "https://ecoglobalexpeditions.com/pasadia_rafting-en_el_canon_del-rio_guejar/"
+    },
+    {
+      "id": 52,
+      "nombre": "Capurganá, un Paraíso por Descubrir – 3, 4 o 5 días",
+      "categoria": "destinos",
+      "descripcion": "Playas de arena blanca, buceo, snorkel entre peces tropicales y corales. Cascadas de aguas cristalinas en la selva.",
+      "url": "https://ecoglobalexpeditions.com/capurgana-un-paraiso-por-descubrir-4-dias/"
+    },
+    {
+      "id": 53,
+      "nombre": "Liberación de Tortugas Golfina en Playa de Oro – Bahía Solano 4, 5 días",
+      "categoria": "actividades",
+      "descripcion": "Contribuye con la liberación de la tortuga marina Golfina, la más pequeña del mundo, en el Pacífico colombiano.",
+      "url": "https://ecoglobalexpeditions.com/liberacion-de-tortugas-golfina-en-playa-de-oro-bahia-solano-4-dias/"
+    },
+    {
+      "id": 54,
+      "nombre": "Puebliada en Suesca Cundinamarca",
+      "categoria": "caminatas",
+      "descripcion": "Desde el parque central de Suesca hasta el lugar de los monolitos, pasando por fincas y senderos.",
+      "url": "https://ecoglobalexpeditions.com/puebliada-en-suesca-cundinamarca/"
+    },
+    {
+      "id": 55,
+      "nombre": "Expedición Monte Roraima y Salto Ángel en Venezuela",
+      "categoria": "destinos",
+      "descripcion": "Descubre El Mundo Perdido: tepuyes más grandes del mundo y la cascada más alta del planeta, el Salto Ángel.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-monte-roraima-y-salto-angel-en-venezuela/"
+    },
+    {
+      "id": 56,
+      "nombre": "Caminata Ecológica Páramo de Rabanal",
+      "categoria": "caminatas",
+      "descripcion": "Grandes farallones rocosos con panorámica excepcional de los valles de Ubaté y Cucunubá.",
+      "url": "https://ecoglobalexpeditions.com/paramo-de-rabanal/"
+    },
+    {
+      "id": 57,
+      "nombre": "Serranía de la Lindosa San José del Guaviare 4 días (Verano)",
+      "categoria": "destinos",
+      "descripcion": "Pinturas rupestres de más de 12.000 años de antigüedad en la Serranía de la Lindosa. Temporada: diciembre a abril.",
+      "url": "https://ecoglobalexpeditions.com/serrania-de-la-lindosa-san-jose-del-guaviare-4-dias-verano-diciembre-a-abril/"
+    },
+    {
+      "id": 58,
+      "nombre": "Auténtica Experiencia Amazónica Chunaki VIP",
+      "categoria": "destinos",
+      "descripcion": "Ecolodge donde el bosque se funde con el río. Actividades a tu ritmo, gastronomía local, orgánica y fresca.",
+      "url": "https://ecoglobalexpeditions.com/autentica-experiencia-amazonica-chunaki-vip/"
+    },
+    {
+      "id": 59,
+      "nombre": "Expedición Raudal y Ventana del Mundo",
+      "categoria": "destinos",
+      "descripcion": "En el departamento del Vaupés, río absolutamente virgen que desemboca en el gran río Apaporís.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-raudal-y-ventana-del-mundo/"
+    },
+    {
+      "id": 60,
+      "nombre": "Caminata Ecológica Arbeláez – Santa Bárbara",
+      "categoria": "caminatas",
+      "descripcion": "Por las montañas de Arbeláez Cundinamarca, mucho bosque y cultivos de café.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-arbelaez-santa-barbara/"
+    },
+    {
+      "id": 61,
+      "nombre": "Expedición Monte Roraima en Venezuela",
+      "categoria": "destinos",
+      "descripcion": "Una de las formaciones geológicas más antiguas de la Tierra, con dos mil millones de años en el Precámbrico.",
+      "url": "https://ecoglobalexpeditions.com/expedicion-monte-roraima-venezuela/"
+    },
+    {
+      "id": 62,
+      "nombre": "Avistamiento de Ballenas y Tortugas en Bahía Solano Playa de Oro 4, 5 días",
+      "categoria": "actividades",
+      "descripcion": "Las ballenas yubartas cumplen cada año una cita en Bahía Solano, uno de los principales atractivos del Chocó.",
+      "url": "https://ecoglobalexpeditions.com/avistamiento-de-ballenas-y-tortugas-en-bahia-solano-playa-de-oro-4-5-dias/"
+    },
+    {
+      "id": 63,
+      "nombre": "Caminata Ecológica Usme – Pasquilla",
+      "categoria": "caminatas",
+      "descripcion": "Caminata ecológica por los cerros surorientales de Bogotá.",
+      "url": "https://ecoglobalexpeditions.com/caminata_ecologica-usme-pasquilla/"
+    },
+    {
+      "id": 64,
+      "nombre": "Caminata Ecológica La Pradera – Pantano de Arce",
+      "categoria": "caminatas",
+      "descripcion": "Inicia en la inspección La Pradera del Municipio de Subachoque, ascendiendo hasta el Pantano de Arce.",
+      "url": "https://ecoglobalexpeditions.com/caminata-ecologica-la-pradera-pantano-de-arce/"
+    }
+  ]
+}
