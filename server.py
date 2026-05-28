@@ -1,225 +1,178 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-import httpx
-import re
+import json
 import os
 
 app = FastAPI()
 
-CRAWL4AI_URL   = os.getenv("CRAWL4AI_URL")
-CRAWL4AI_TOKEN = os.getenv("CRAWL4AI_TOKEN")
-API_SECRET     = os.getenv("API_SECRET")
-
-URLS = {
-    "all":         "https://ecoglobalexpeditions.com/all/",
-    "caminatas":   "https://ecoglobalexpeditions.com/caminatas/",
-    "destinos":    "https://ecoglobalexpeditions.com/destinos/",
-    "actividades": "https://ecoglobalexpeditions.com/actividades/",
-}
+CATALOGO_FILE = os.path.join(os.path.dirname(__file__), "catalogo.json")
 
 TOOLS = [
     {
-        "name": "scrape_pagina",
-        "description": "Consulta una URL del sitio ecoglobalexpeditions.com y extrae su contenido actualizado en tiempo real. Úsalo cuando el cliente pregunte por expediciones específicas, precios o fechas.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "URL a consultar. Ej: https://ecoglobalexpeditions.com/caminatas/"
-                }
-            },
-            "required": ["url"]
-        }
-    },
-    {
         "name": "listar_expediciones",
-        "description": "Obtiene el catálogo completo de expediciones disponibles desde el sitio web en tiempo real.",
+        "description": "Obtiene el catálogo completo de expediciones disponibles de Ecoglobal Expeditions. Úsalo cuando el cliente pregunte qué opciones hay, o cuando necesites encontrar planes según el tipo de naturaleza.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "categoria": {
                     "type": "string",
-                    "description": "Filtro: caminatas, destinos, actividades, o all",
+                    "description": "Filtro: 'caminatas' para montaña/páramo/cerros, 'destinos' para mar/selva/desierto/llanos, 'actividades' para ballenas/rafting/fotografía, 'all' para todo",
                     "default": "all"
+                },
+                "busqueda": {
+                    "type": "string",
+                    "description": "Término de búsqueda opcional para filtrar por nombre o descripción"
                 }
             }
+        }
+    },
+    {
+        "name": "detalle_expedicion",
+        "description": "Obtiene el detalle de una expedición específica por nombre. Úsalo cuando el cliente quiera saber más sobre un plan en particular.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "nombre": {
+                    "type": "string",
+                    "description": "Nombre o parte del nombre de la expedición"
+                }
+            },
+            "required": ["nombre"]
         }
     }
 ]
 
-# ── Scraping directo httpx (sin Playwright, ~1-3 seg) ────────
-async def crawlear(url: str) -> str:
+
+def cargar_catalogo():
     try:
-        async with httpx.AsyncClient(
-            timeout=15,
-            follow_redirects=True,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; EcoBot/1.0)",
-                "Accept": "text/html,application/xhtml+xml",
-                "Accept-Language": "es-CO,es;q=0.9"
-            }
-        ) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            html = resp.text
-
-            # Eliminar bloques no útiles
-            html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
-            html = re.sub(r'<style[^>]*>.*?</style>',  '', html, flags=re.DOTALL)
-            html = re.sub(r'<nav[^>]*>.*?</nav>',      '', html, flags=re.DOTALL)
-            html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL)
-            html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL)
-
-            # Limpiar tags HTML restantes
-            texto = re.sub(r'<[^>]+>', ' ', html)
-
-            # Limpiar espacios múltiples
-            texto = re.sub(r'\s+', ' ', texto).strip()
-
-            # Decodificar entidades HTML comunes
-            texto = (texto
-                .replace('&amp;',   '&')
-                .replace('&nbsp;',  ' ')
-                .replace('&#8211;', '-')
-                .replace('&#8212;', '—')
-                .replace('&#8230;', '...')
-                .replace('&lt;',    '<')
-                .replace('&gt;',    '>')
-                .replace('&quot;',  '"')
-                .replace('&#039;',  "'")
-            )
-
-            return texto[:8000] if texto else "Sin contenido disponible"
-
-    except httpx.TimeoutException:
-        return "TIMEOUT: El sitio tardó demasiado. Intenta de nuevo en un momento."
-    except httpx.HTTPStatusError as e:
-        return f"ERROR HTTP {e.response.status_code}: No se pudo acceder al sitio."
+        with open(CATALOGO_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        return {"error": str(e), "expediciones": []}
 
 
-# ── Endpoint principal MCP (JSON-RPC 2.0) ───────────────────
+def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str:
+    catalogo = cargar_catalogo()
+    expediciones = catalogo.get("expediciones", [])
+
+    if categoria and categoria != "all":
+        expediciones = [e for e in expediciones if e.get("categoria") == categoria]
+
+    if busqueda:
+        termino = busqueda.lower()
+        expediciones = [
+            e for e in expediciones
+            if termino in e.get("nombre", "").lower()
+            or termino in e.get("descripcion", "").lower()
+        ]
+
+    if not expediciones:
+        return f"No encontré expediciones para '{categoria}'. Categorías: caminatas, destinos, actividades."
+
+    total = len(expediciones)
+    resultado = f"Catálogo Ecoglobal ({total} planes):\n\n"
+    for exp in expediciones:
+        resultado += f"- {exp['nombre']}\n"
+        resultado += f"  {exp['descripcion']}\n"
+        resultado += f"  {exp['url']}\n\n"
+
+    resultado += "Precios y fechas: WhatsApp +57 300 312 7496 o info@ecoglobalexpeditions.com"
+    return resultado[:8000]
+
+
+def buscar_detalle(nombre: str) -> str:
+    catalogo = cargar_catalogo()
+    expediciones = catalogo.get("expediciones", [])
+    termino = nombre.lower()
+    coincidencias = [e for e in expediciones if termino in e.get("nombre", "").lower()]
+
+    if not coincidencias:
+        return f"No encontré '{nombre}'. Prueba con otro término."
+
+    resultado = ""
+    for exp in coincidencias[:3]:
+        resultado += f"Nombre: {exp['nombre']}\n"
+        resultado += f"Categoría: {exp['categoria']}\n"
+        resultado += f"Descripción: {exp['descripcion']}\n"
+        resultado += f"URL: {exp['url']}\n\n"
+
+    resultado += "Precios y fechas: WhatsApp +57 300 312 7496"
+    return resultado
+
+
 @app.post("/mcp")
 async def mcp_handler(request: Request):
     body = await request.json()
-
     jsonrpc_id = body.get("id", 1)
     method     = body.get("method", "")
     params     = body.get("params", {})
 
-    # ── initialize ───────────────────────────────────────────
     if method == "initialize":
         return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": jsonrpc_id,
+            "jsonrpc": "2.0", "id": jsonrpc_id,
             "result": {
                 "protocolVersion": "2024-11-05",
-                "serverInfo": {
-                    "name": "crawl4ai-ecoglobal",
-                    "version": "1.0.0"
-                },
-                "capabilities": {
-                    "tools": {}
-                }
+                "serverInfo": {"name": "ecoglobal-catalogo", "version": "2.0.0"},
+                "capabilities": {"tools": {}}
             }
         })
 
-    # ── tools/list ───────────────────────────────────────────
     if method == "tools/list":
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": jsonrpc_id,
-            "result": {
-                "tools": TOOLS
-            }
-        })
+        return JSONResponse({"jsonrpc": "2.0", "id": jsonrpc_id, "result": {"tools": TOOLS}})
 
-    # ── tools/call ───────────────────────────────────────────
     if method == "tools/call":
         tool_name = params.get("name", "")
         arguments = params.get("arguments", {})
 
-        if tool_name == "scrape_pagina":
-            url = arguments.get("url", URLS["all"])
-            contenido = await crawlear(url)
-            return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": jsonrpc_id,
-                "result": {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": contenido
-                        }
-                    ]
-                }
-            })
-
         if tool_name == "listar_expediciones":
-            categoria = arguments.get("categoria", "all")
-            url = URLS.get(categoria, URLS["all"])
-            contenido = await crawlear(url)
+            resultado = buscar_expediciones(
+                arguments.get("categoria", "all"),
+                arguments.get("busqueda", "")
+            )
             return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": jsonrpc_id,
-                "result": {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": contenido
-                        }
-                    ]
-                }
+                "jsonrpc": "2.0", "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": resultado}]}
+            })
+
+        if tool_name == "detalle_expedicion":
+            resultado = buscar_detalle(arguments.get("nombre", ""))
+            return JSONResponse({
+                "jsonrpc": "2.0", "id": jsonrpc_id,
+                "result": {"content": [{"type": "text", "text": resultado}]}
             })
 
         return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": jsonrpc_id,
-            "error": {
-                "code": -32601,
-                "message": f"Tool '{tool_name}' no encontrada"
-            }
+            "jsonrpc": "2.0", "id": jsonrpc_id,
+            "error": {"code": -32601, "message": f"Tool '{tool_name}' no encontrada"}
         })
 
-    # ── notifications (no requieren respuesta) ───────────────
     if method.startswith("notifications/"):
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": jsonrpc_id,
-            "result": {}
-        })
+        return JSONResponse({"jsonrpc": "2.0", "id": jsonrpc_id, "result": {}})
 
-    # ── método no reconocido ─────────────────────────────────
     return JSONResponse({
-        "jsonrpc": "2.0",
-        "id": jsonrpc_id,
-        "error": {
-            "code": -32601,
-            "message": f"Método '{method}' no reconocido"
-        }
+        "jsonrpc": "2.0", "id": jsonrpc_id,
+        "error": {"code": -32601, "message": f"Método '{method}' no reconocido"}
     })
 
 
-# ── Descubrimiento GET ───────────────────────────────────────
 @app.get("/mcp")
 async def mcp_discovery():
+    catalogo = cargar_catalogo()
     return {
-        "name": "crawl4ai-ecoglobal",
-        "version": "1.0.0",
-        "description": "Consulta en tiempo real el sitio de Ecoglobal Expeditions",
+        "name": "ecoglobal-catalogo", "version": "2.0.0",
+        "description": "Catálogo Ecoglobal Expeditions — 64 planes",
+        "total_planes": catalogo.get("total", 0),
         "tools": TOOLS
     }
 
 
-# ── Health check ─────────────────────────────────────────────
 @app.get("/health")
 async def health():
+    catalogo = cargar_catalogo()
     return {
         "status": "ok",
-        "servicio": "crawl4ai-bridge-ecoglobal",
-        "protocolo": "JSON-RPC 2.0 MCP",
-        "motor": "httpx directo (sin Playwright)",
-        "crawl4ai_conectado": CRAWL4AI_URL
+        "servicio": "ecoglobal-catalogo-mcp",
+        "motor": "JSON estático (sin scraping)",
+        "total_planes": catalogo.get("total", 0),
+        "updated_at": catalogo.get("updated_at", "")
     }
