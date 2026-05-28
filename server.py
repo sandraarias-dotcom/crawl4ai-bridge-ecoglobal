@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 import httpx
+import re
 import os
 
 app = FastAPI()
@@ -48,33 +48,57 @@ TOOLS = [
     }
 ]
 
+# ── Scraping directo httpx (sin Playwright, ~1-3 seg) ────────
 async def crawlear(url: str) -> str:
     try:
-        async with httpx.AsyncClient(timeout=25) as client:
-            resp = await client.post(
-                f"{CRAWL4AI_URL}/crawl",
-                headers={"Authorization": f"Bearer {CRAWL4AI_TOKEN}"},
-                json={
-                    "urls": [url],
-                    "word_count_threshold": 5,
-                    "bypass_cache": True,
-                    "crawler_params": {
-                        "headless": True,
-                        "page_timeout": 20000,
-                        "wait_for": "domcontentloaded"
-                    },
-                    "content_filter": {
-                        "type": "PruningContentFilter",
-                        "threshold": 0.4
-                    }
-                }                
+        async with httpx.AsyncClient(
+            timeout=15,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; EcoBot/1.0)",
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "es-CO,es;q=0.9"
+            }
+        ) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            html = resp.text
+
+            # Eliminar bloques no útiles
+            html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
+            html = re.sub(r'<style[^>]*>.*?</style>',  '', html, flags=re.DOTALL)
+            html = re.sub(r'<nav[^>]*>.*?</nav>',      '', html, flags=re.DOTALL)
+            html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL)
+            html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL)
+
+            # Limpiar tags HTML restantes
+            texto = re.sub(r'<[^>]+>', ' ', html)
+
+            # Limpiar espacios múltiples
+            texto = re.sub(r'\s+', ' ', texto).strip()
+
+            # Decodificar entidades HTML comunes
+            texto = (texto
+                .replace('&amp;',   '&')
+                .replace('&nbsp;',  ' ')
+                .replace('&#8211;', '-')
+                .replace('&#8212;', '—')
+                .replace('&#8230;', '...')
+                .replace('&lt;',    '<')
+                .replace('&gt;',    '>')
+                .replace('&quot;',  '"')
+                .replace('&#039;',  "'")
             )
-            data = resp.json()
-            if data.get("results") and len(data["results"]) > 0:
-                return data["results"][0].get("markdown", "Sin contenido")
-            return "No se pudo obtener información del sitio"
+
+            return texto[:8000] if texto else "Sin contenido disponible"
+
+    except httpx.TimeoutException:
+        return "TIMEOUT: El sitio tardó demasiado. Intenta de nuevo en un momento."
+    except httpx.HTTPStatusError as e:
+        return f"ERROR HTTP {e.response.status_code}: No se pudo acceder al sitio."
     except Exception as e:
-        return f"Error al consultar el sitio: {str(e)}"
+        return f"ERROR: {str(e)}"
+
 
 # ── Endpoint principal MCP (JSON-RPC 2.0) ───────────────────
 @app.post("/mcp")
@@ -127,7 +151,7 @@ async def mcp_handler(request: Request):
                     "content": [
                         {
                             "type": "text",
-                            "text": contenido[:8000]
+                            "text": contenido
                         }
                     ]
                 }
@@ -144,7 +168,7 @@ async def mcp_handler(request: Request):
                     "content": [
                         {
                             "type": "text",
-                            "text": contenido[:8000]
+                            "text": contenido
                         }
                     ]
                 }
@@ -161,7 +185,11 @@ async def mcp_handler(request: Request):
 
     # ── notifications (no requieren respuesta) ───────────────
     if method.startswith("notifications/"):
-        return JSONResponse({"jsonrpc": "2.0", "id": jsonrpc_id, "result": {}})
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": jsonrpc_id,
+            "result": {}
+        })
 
     # ── método no reconocido ─────────────────────────────────
     return JSONResponse({
@@ -173,7 +201,8 @@ async def mcp_handler(request: Request):
         }
     })
 
-# ── Descubrimiento GET (algunos clientes lo usan) ────────────
+
+# ── Descubrimiento GET ───────────────────────────────────────
 @app.get("/mcp")
 async def mcp_discovery():
     return {
@@ -183,11 +212,14 @@ async def mcp_discovery():
         "tools": TOOLS
     }
 
+
+# ── Health check ─────────────────────────────────────────────
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
         "servicio": "crawl4ai-bridge-ecoglobal",
         "protocolo": "JSON-RPC 2.0 MCP",
+        "motor": "httpx directo (sin Playwright)",
         "crawl4ai_conectado": CRAWL4AI_URL
     }
