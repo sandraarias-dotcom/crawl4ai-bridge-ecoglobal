@@ -10,7 +10,7 @@ CATALOGO_FILE = os.path.join(os.path.dirname(__file__), "catalogo.json")
 TOOLS = [
     {
         "name": "listar_expediciones",
-        "description": "Obtiene el catálogo completo de expediciones disponibles de Ecoglobal Expeditions. Úsalo cuando el cliente pregunte qué opciones hay, o cuando necesites encontrar planes según el tipo de naturaleza.",
+        "description": "Obtiene el catálogo de expediciones disponibles de Ecoglobal Expeditions. Úsalo cuando el cliente pregunte qué opciones hay según el tipo de naturaleza.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -21,14 +21,14 @@ TOOLS = [
                 },
                 "busqueda": {
                     "type": "string",
-                    "description": "Término de búsqueda opcional para filtrar por nombre o descripción"
+                    "description": "Término opcional para filtrar por nombre"
                 }
             }
         }
     },
     {
         "name": "detalle_expedicion",
-        "description": "Obtiene el detalle de una expedición específica por nombre. Úsalo cuando el cliente quiera saber más sobre un plan en particular.",
+        "description": "Obtiene el detalle de una expedición específica por nombre.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -67,17 +67,14 @@ def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str:
         ]
 
     if not expediciones:
-        return f"No encontré expediciones para '{categoria}'. Categorías: caminatas, destinos, actividades."
+        return f"Sin resultados para '{categoria}'."
 
     total = len(expediciones)
-    resultado = f"Catálogo Ecoglobal ({total} planes):\n\n"
-    for exp in expediciones:
-        resultado += f"- {exp['nombre']}\n"
-        resultado += f"  {exp['descripcion']}\n"
-        resultado += f"  {exp['url']}\n\n"
+    resultado = f"Planes disponibles ({total} total):\n"
+    for exp in expediciones[:10]:
+        resultado += f"• {exp['nombre']} — {exp['url']}\n"
 
-    resultado += "Precios y fechas: WhatsApp +57 300 312 7496 o info@ecoglobalexpeditions.com"
-    return resultado[:8000]
+    return resultado
 
 
 def buscar_detalle(nombre: str) -> str:
@@ -87,17 +84,16 @@ def buscar_detalle(nombre: str) -> str:
     coincidencias = [e for e in expediciones if termino in e.get("nombre", "").lower()]
 
     if not coincidencias:
-        return f"No encontré '{nombre}'. Prueba con otro término."
+        return f"No encontré '{nombre}'."
 
-    resultado = ""
-    for exp in coincidencias[:3]:
-        resultado += f"Nombre: {exp['nombre']}\n"
-        resultado += f"Categoría: {exp['categoria']}\n"
-        resultado += f"Descripción: {exp['descripcion']}\n"
-        resultado += f"URL: {exp['url']}\n\n"
-
-    resultado += "Precios y fechas: WhatsApp +57 300 312 7496"
-    return resultado
+    exp = coincidencias[0]
+    return (
+        f"Nombre: {exp['nombre']}\n"
+        f"Categoría: {exp['categoria']}\n"
+        f"Descripción: {exp['descripcion']}\n"
+        f"URL: {exp['url']}\n"
+        f"Precios y fechas: WhatsApp +57 300 312 7496"
+    )
 
 
 @app.post("/mcp")
@@ -109,7 +105,8 @@ async def mcp_handler(request: Request):
 
     if method == "initialize":
         return JSONResponse({
-            "jsonrpc": "2.0", "id": jsonrpc_id,
+            "jsonrpc": "2.0",
+            "id": jsonrpc_id,
             "result": {
                 "protocolVersion": "2024-11-05",
                 "serverInfo": {"name": "ecoglobal-catalogo", "version": "2.0.0"},
@@ -118,7 +115,11 @@ async def mcp_handler(request: Request):
         })
 
     if method == "tools/list":
-        return JSONResponse({"jsonrpc": "2.0", "id": jsonrpc_id, "result": {"tools": TOOLS}})
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": jsonrpc_id,
+            "result": {"tools": TOOLS}
+        })
 
     if method == "tools/call":
         tool_name = params.get("name", "")
@@ -130,19 +131,22 @@ async def mcp_handler(request: Request):
                 arguments.get("busqueda", "")
             )
             return JSONResponse({
-                "jsonrpc": "2.0", "id": jsonrpc_id,
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
                 "result": {"content": [{"type": "text", "text": resultado}]}
             })
 
         if tool_name == "detalle_expedicion":
             resultado = buscar_detalle(arguments.get("nombre", ""))
             return JSONResponse({
-                "jsonrpc": "2.0", "id": jsonrpc_id,
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id,
                 "result": {"content": [{"type": "text", "text": resultado}]}
             })
 
         return JSONResponse({
-            "jsonrpc": "2.0", "id": jsonrpc_id,
+            "jsonrpc": "2.0",
+            "id": jsonrpc_id,
             "error": {"code": -32601, "message": f"Tool '{tool_name}' no encontrada"}
         })
 
@@ -150,7 +154,8 @@ async def mcp_handler(request: Request):
         return JSONResponse({"jsonrpc": "2.0", "id": jsonrpc_id, "result": {}})
 
     return JSONResponse({
-        "jsonrpc": "2.0", "id": jsonrpc_id,
+        "jsonrpc": "2.0",
+        "id": jsonrpc_id,
         "error": {"code": -32601, "message": f"Método '{method}' no reconocido"}
     })
 
@@ -159,7 +164,8 @@ async def mcp_handler(request: Request):
 async def mcp_discovery():
     catalogo = cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "2.0.0",
+        "name": "ecoglobal-catalogo",
+        "version": "2.0.0",
         "description": "Catálogo Ecoglobal Expeditions — 64 planes",
         "total_planes": catalogo.get("total", 0),
         "tools": TOOLS
