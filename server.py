@@ -1,5 +1,5 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v4.0.0
+server.py — Bridge MCP Ecoglobal Expeditions v5.0.0
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
 """
 from fastapi import FastAPI, Request, BackgroundTasks
@@ -98,58 +98,45 @@ TOOLS = [
 def resumen_plan(exp: dict) -> str:
     nd = "Consultar con asesor"
     lineas = [f"• {exp['nombre']}"]
-    lineas.append(f"  Precio: {exp.get('precio_texto', nd)} p/persona")
-    if exp.get("duracion"):         lineas.append(f"  Duración: {exp['duracion']}")
-    if exp.get("nivel_dificultad"): lineas.append(f"  Dificultad: {exp['nivel_dificultad']}")
-    if exp.get("proximas_fechas"):  lineas.append(f"  Próx. salidas: {', '.join(exp['proximas_fechas'][:2])}")
+    lineas.append(f"  Precio desde: {exp.get('precio_texto', nd)} p/persona")
+    if exp.get("duracion"):
+        lineas.append(f"  Duración: {exp['duracion']}")
     lineas.append(f"  URL: {exp['url']}")
     return "\n".join(lineas)
 
 
+# Orden y títulos legibles de las secciones para el detalle
+_SECCIONES_DETALLE = [
+    ("DESCRIPCIÓN",            "descripcion_completa"),
+    ("LOCALIZACIÓN",           "localizacion"),
+    ("FECHAS",                 "fechas"),
+    ("PRECIO Y FORMA DE PAGO", "precio_y_forma_de_pago"),
+    ("CÓMO INSCRIBIRSE",       "como_inscribirse"),
+    ("INCLUYE",                "incluye"),
+    ("NO INCLUYE",             "no_incluye"),
+    ("ITINERARIO",             "itinerario"),
+    ("RECOMENDACIONES",        "recomendaciones"),
+]
+
+
 def detalle_plan(exp: dict) -> str:
+    """Devuelve el contenido FIEL del plan, sección por sección, tal como en la web."""
     nd = "No disponible — consultar con asesor"
-    lineas = [
-        f"PLAN: {exp['nombre']}",
-        f"Descripción: {exp.get('descripcion', nd)}",
-        "",
-        f"PRECIO: {exp.get('precio_texto', nd)} por persona",
-    ]
-    if exp.get("precio_vigencia"):   lineas.append(f"Vigencia: {exp['precio_vigencia']}")
-    lineas += [
-        f"Duración: {exp.get('duracion', nd)}",
-        f"Dificultad: {exp.get('nivel_dificultad', nd)}",
-        f"Nivel confort: {exp.get('nivel_confort', nd)}",
-    ]
-    if exp.get("ubicacion"):     lineas.append(f"Ubicación: {exp['ubicacion']}")
-    if exp.get("ecosistema"):    lineas.append(f"Ecosistema: {exp['ecosistema']}")
-    if exp.get("ciudad_salida"): lineas.append(f"Sale desde: {exp['ciudad_salida']}")
+    d = exp.get("detalles", {}) or {}
+    lineas = [f"PLAN: {exp.get('nombre', '')}"]
+    if exp.get("precio_texto"):
+        lineas.append(f"PRECIO DESDE: {exp['precio_texto']} por persona")
+    if exp.get("duracion"):
+        lineas.append(f"DURACIÓN: {exp['duracion']}")
 
-    if exp.get("proximas_fechas"):
-        lineas += ["", "FECHAS:"]
-        for f in exp["proximas_fechas"][:5]: lineas.append(f"  - {f}")
-    else:
-        lineas.append(f"\nFECHAS: {nd}")
+    for titulo, clave in _SECCIONES_DETALLE:
+        contenido = d.get(clave)
+        if contenido:
+            lineas.append(f"\n=== {titulo} ===\n{contenido}")
 
-    if exp.get("incluye"):
-        lineas += ["", "INCLUYE:"]
-        for i in exp["incluye"][:6]: lineas.append(f"  - {i}")
-    else:
-        lineas.append(f"\nINCLUYE: {nd}")
-
-    if exp.get("no_incluye"):
-        lineas += ["", "NO INCLUYE:"]
-        for i in exp["no_incluye"][:5]: lineas.append(f"  - {i}")
-
-    if exp.get("itinerario"):
-        lineas += ["", "ITINERARIO:"]
-        for it in exp["itinerario"][:5]: lineas.append(f"  {it}")
-
-    if exp.get("recomendaciones"):
-        lineas += ["", "RECOMENDACIONES:"]
-        for r in exp["recomendaciones"][:4]: lineas.append(f"  - {r}")
-
-    lineas += ["", f"INSCRIPCIÓN: {exp.get('como_inscribirse', nd)}", f"URL: {exp['url']}"]
-    if exp.get("pdf_url"): lineas.append(f"PDF: {exp['pdf_url']}")
+    lineas.append(f"\nURL: {exp.get('url', '')}")
+    if exp.get("pdf_url"):
+        lineas.append(f"PDF: {exp['pdf_url']}")
     return "\n".join(lineas)
 
 
@@ -159,7 +146,8 @@ async def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str
         exps = [e for e in exps if e.get("categoria") == categoria]
     if busqueda:
         t = busqueda.lower()
-        exps = [e for e in exps if t in e.get("nombre","").lower() or t in e.get("descripcion","").lower()]
+        exps = [e for e in exps if t in e.get("nombre","").lower()
+                or t in (e.get("detalles", {}) or {}).get("descripcion_completa","").lower()]
     if not exps:
         return f"Sin resultados para '{categoria}'."
     total    = len(exps)
@@ -188,7 +176,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"4.0.0"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.0.0"},
             "capabilities":{"tools":{}}
         }})
 
@@ -234,7 +222,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "4.0.0",
+        "name": "ecoglobal-catalogo", "version": "5.0.0",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -249,13 +237,13 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "4.0.0",
+        "version": "5.0.0",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
-        "planes_con_precio":  sum(1 for e in exps if e.get("precio_texto")),
-        "planes_con_fechas":  sum(1 for e in exps if e.get("proximas_fechas")),
-        "planes_con_incluye": sum(1 for e in exps if e.get("incluye")),
+        "planes_con_precio":     sum(1 for e in exps if e.get("precio_texto")),
+        "planes_con_detalles":   sum(1 for e in exps if e.get("detalles")),
+        "planes_con_itinerario": sum(1 for e in exps if (e.get("detalles") or {}).get("itinerario")),
         "updated_at": c.get("updated_at", ""),
         "cache_activo": _cache["ts"] is not None
     }
