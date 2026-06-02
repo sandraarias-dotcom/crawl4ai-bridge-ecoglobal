@@ -2,3 +2,5 @@ fastapi
 uvicorn
 httpx
 pydantic
+markdownify
+beautifulsoup4
