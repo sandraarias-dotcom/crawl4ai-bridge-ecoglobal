@@ -1,6 +1,8 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v5.3.0
+server.py — Bridge MCP Ecoglobal Expeditions v5.4.0
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
+v5.4.0: la sección "localizacion" arma el enlace de Maps al destino desde la
+        "Ubicación" guardada (determinista, rápido; el agente solo releva).
 v5.3.0: la sección "fechas" se filtra en el servidor (solo vigentes; descarta
         vencidas de forma determinista, sin depender del modelo).
 v5.2.0: detalle_expedicion acepta "seccion" (devuelve SOLO esa sección, ya
@@ -200,6 +202,22 @@ _MES_NOMBRE = {1:"enero",2:"febrero",3:"marzo",4:"abril",5:"mayo",6:"junio",7:"j
     8:"agosto",9:"septiembre",10:"octubre",11:"noviembre",12:"diciembre"}
 
 
+def _localizacion_link(desc: str, nombre: str) -> str:
+    """Arma el enlace de Google Maps al DESTINO usando la 'Ubicación' que la
+    página define (guardada en la descripción). Determinista, sin coordenadas."""
+    from urllib.parse import quote_plus
+    m = re.search(r"Ubicaci[oó]n\s*:?\**\s*([^\n]+)", desc or "", re.I)
+    loc = m.group(1).strip().strip("*").strip() if m else ""
+    base = loc or nombre
+    q = re.sub(r"(?i)^municipios?\s+de\s+", "", base)
+    q = re.split(r"(?i)\s+al\s+(?:norte|sur|oriente|occidente|nororiente|noroccidente)\b", q)[0]
+    q = q.replace(" y ", ", ").strip(" .,")
+    link = f"https://www.google.com/maps/search/?api=1&query={quote_plus(q + ', Colombia')}"
+    if loc:
+        return f"📍 Ubicación del destino: {loc}\n👉 Ver en Google Maps: {link}"
+    return f"📍 Destino: {nombre}\n👉 Ver en Google Maps: {link}"
+
+
 def _fechas_vigentes_texto(texto: str, hoy=None) -> str:
     """Extrae fechas 'D de MES de AAAA', descarta las vencidas y devuelve SOLO
     las vigentes (hoy o futuras). Determinista: no depende del modelo. Si
@@ -329,6 +347,9 @@ async def buscar_detalle(nombre: str, seccion: str = "", parte: int = 1) -> str:
     s = _norm(seccion)
     if s == "pdf":
         return f"PDF del plan: {exp.get('pdf_url', '(no disponible)')}"
+    # LOCALIZACIÓN: derivar enlace de Maps del destino (la 'Ubicación' del JSON)
+    if s in ("localizacion", "ubicacion"):
+        return _localizacion_link(d.get("descripcion_completa", ""), exp.get("nombre", ""))
     clave = _SECCION_ALIAS.get(s)
     if not clave:
         return f"Sección '{seccion}' no reconocida."
@@ -367,7 +388,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.3.0"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.4.0"},
             "capabilities":{"tools":{}}
         }})
 
@@ -417,7 +438,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "5.3.0",
+        "name": "ecoglobal-catalogo", "version": "5.4.0",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -432,7 +453,7 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "5.3.0",
+        "version": "5.4.0",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
