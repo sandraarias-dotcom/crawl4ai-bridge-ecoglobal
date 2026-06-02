@@ -1,9 +1,12 @@
 """
-cron_actualizar_catalogo.py — Ecoglobal Expeditions v4.0.0
-Autodescubre + enriquece planes + guarda catalogo.json en GitHub.
+cron_actualizar_catalogo.py — Ecoglobal Expeditions v5.0.0
+Autodescubre + extrae FIEL cada sección de la página + guarda catalogo.json en GitHub.
+Extracción por secciones (HTML -> markdown -> split por encabezados H2), sin truncado.
 El archivo es visible en:
 https://github.com/sandraarias-dotcom/crawl4ai-bridge-ecoglobal/blob/main/catalogo.json
 Railway cron: 0 8 * * * (8AM UTC = 3AM Colombia)
+
+Dependencias añadidas (agregar a requirements.txt): markdownify, beautifulsoup4
 """
 
 import asyncio
@@ -11,8 +14,10 @@ import json
 import os
 import re
 import base64
+import unicodedata
 import httpx
 from datetime import datetime
+from markdownify import markdownify as html_a_md
 
 # ── Config ───────────────────────────────────────────────────
 CATALOGO_FILE  = os.path.join(os.path.dirname(__file__), "catalogo.json")
@@ -43,6 +48,21 @@ PATRON_NO_PLAN = re.compile(
     r"politica-|terminos|privacidad|aviso-legal|cookies|condiciones-)",
     re.IGNORECASE,
 )
+
+# Encabezados de sección del tema Ecoglobal -> clave en el JSON.
+# Estos H2 son consistentes en todas las páginas de plan.
+SECCIONES = {
+    "localizacion": "localizacion",
+    "fechas": "fechas",
+    "precio y forma de pago": "precio_y_forma_de_pago",
+    "como inscribirse": "como_inscribirse",
+    "incluye": "incluye",
+    "no incluye": "no_incluye",
+    "itinerario": "itinerario",
+    "recomendaciones": "recomendaciones",
+}
+# Encabezados que son solo divisores, sin cuerpo propio
+SECCIONES_IGNORAR = {"detalles", "comparte"}
 
 
 # ── GitHub helpers ───────────────────────────────────────────
@@ -229,129 +249,108 @@ async def descubrir_planes_nuevos(urls_actuales: set) -> list:
         nuevos.append({
             "id": None, "nombre": nombre,
             "categoria": inferir_categoria(url, nombre),
-            "descripcion": "", "url": url
+            "url": url, "detalles": {}
         })
         print(f"  ➕ {nombre[:60]}")
         await asyncio.sleep(0.5)
     return nuevos
 
 
-# ── PASO 1: Extracción de datos ──────────────────────────────
+# ── PASO 1: Extracción FIEL por secciones ────────────────────
+
+def _norm(s: str) -> str:
+    """minúsculas, sin acentos, sin signos, espacios colapsados (para comparar labels)."""
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"[¿?¡!:.\u2013\u2014-]", " ", s)
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def _limpiar_seccion(texto: str) -> str:
+    """Limpieza ligera del markdown de una sección, preservando texto, listas y negritas."""
+    texto = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", texto)      # imágenes (no aportan al agente)
+    lineas = []
+    for ln in texto.split("\n"):
+        # descartar líneas que son solo anclas/CTA tipo [Explora](#...) [Reserva](#...)
+        if re.fullmatch(r"\s*(?:\[[^\]]*\]\(#[^)]*\)\s*)+", ln):
+            continue
+        lineas.append(ln.rstrip())
+    texto = "\n".join(lineas)
+    texto = re.sub(r"\n{3,}", "\n\n", texto)
+    return texto.strip()
+
 
 def extraer_datos_plan(html: str) -> dict:
+    """
+    Extracción FIEL: convierte la página a markdown y captura cada sección
+    (Localización, Fechas, Precio, Incluye, No incluye, Itinerario, etc.)
+    completa y verbatim. Sin truncado ni regex frágil sobre texto libre.
+    """
     datos = {
-        "precio_desde": None, "precio_texto": None, "precio_vigencia": None,
+        "nombre": None,
+        "precio_texto": None, "precio_desde": None,
         "duracion": None, "duracion_dias": None,
-        "nivel_dificultad": None, "nivel_confort": None,
-        "ecosistema": None, "clima": None, "elevacion": None,
-        "ubicacion": None, "distancia": None, "ciudad_salida": None,
-        "atractivos": [], "proximas_fechas": [],
-        "incluye": [], "no_incluye": [],
-        "itinerario": [], "recomendaciones": [],
-        "como_inscribirse": None, "pdf_url": None,
-        "descripcion_completa": None,
+        "pdf_url": None,
+        "detalles": {},
     }
     if not html:
         return datos
 
-    hl = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
-    hl = re.sub(r'<style[^>]*>.*?</style>',  '', hl,   flags=re.DOTALL)
-    tx = re.sub(r'<[^>]+>', ' ', hl)
-    tx = re.sub(r'\s+', ' ', tx).strip()
-    tl = tx.lower()
+    md = html_a_md(html, heading_style="ATX", strip=["script", "style"])
 
-    # Precio
-    precios = re.findall(r'\$\s*([\d]{1,3}(?:[.,]\d{3})+)', tx)
+    # PDF (capturar antes de recortar la región)
+    pdf = re.search(r"\(([^)]*convert-to-pdf[^)]*)\)", md)
+    if pdf:
+        datos["pdf_url"] = pdf.group(1).replace("&amp;", "&")
+
+    # Título del plan (primer H1)
+    m_h1 = re.search(r"^#\s+(.+)$", md, re.MULTILINE)
+    if not m_h1:
+        return datos
+    datos["nombre"] = m_h1.group(1).strip()
+
+    # Recortar región útil: desde el H1 hasta el bloque de "Descargar como PDF" / "Comparte"
+    inicio = m_h1.start()
+    fin = len(md)
+    for marcador in (r"^#{1,6}\s*\[?Descargar como PDF", r"^Comparte\s*:", r"convert-to-pdf"):
+        mm = re.search(marcador, md[inicio:], re.MULTILINE | re.IGNORECASE)
+        if mm:
+            fin = min(fin, inicio + mm.start())
+    region = md[inicio:fin]
+
+    # Partir por encabezados H2 (## Label)
+    partes = re.split(r"^##\s+(.+)$", region, flags=re.MULTILINE)
+
+    # partes[0] = bloque entre el H1 y el primer H2 = descripción completa
+    descripcion = re.sub(r"^#\s+.+$", "", partes[0], count=1, flags=re.MULTILINE)
+    desc_limpia = _limpiar_seccion(descripcion)
+    if desc_limpia:
+        datos["detalles"]["descripcion_completa"] = desc_limpia
+
+    # Pares (label, contenido) para cada sección del acordeón
+    for i in range(1, len(partes), 2):
+        label = _norm(partes[i])
+        if label in SECCIONES_IGNORAR:
+            continue
+        clave = SECCIONES.get(label)
+        if not clave:
+            continue
+        contenido = _limpiar_seccion(partes[i + 1] if i + 1 < len(partes) else "")
+        if contenido:
+            datos["detalles"][clave] = contenido
+
+    # Campos estructurados (solo para listar/filtrar; el detalle vive en 'detalles')
+    precios = re.findall(r"\$\s*([\d]{1,3}(?:[.,]\d{3})+)", region)
     if precios:
-        ps = precios[0].replace('.','').replace(',','')
+        datos["precio_texto"] = f"${precios[0].replace(' ', '')}"
         try:
-            datos["precio_desde"] = int(ps)
-            datos["precio_texto"]  = f"${precios[0]}"
-        except:
-            datos["precio_texto"]  = f"${precios[0]}"
-    v = re.search(r'precio[s]?\s+(?:para\s+el?\s+año\s+)?(\d{4})', tl)
-    if v: datos["precio_vigencia"] = v.group(1)
-
-    # Duración
-    d = re.search(r'(\d+)\s*d[íi]as?\s*(?:y\s*(\d+)\s*noches?)?', tl)
-    if d:
-        datos["duracion_dias"] = int(d.group(1))
-        datos["duracion"] = f"{d.group(1)} días" + (f" y {d.group(2)} noches" if d.group(2) else "")
-    elif re.search(r'un d[íi]a|1 d[íi]a|d[íi]a completo', tl):
-        datos["duracion_dias"] = 1
-        datos["duracion"] = "1 día"
-
-    # Dificultad
-    for k, v2 in [("nevado","Nevado"),("páramo-volcán","Páramo-Volcán"),
-                   ("paramo-volcan","Páramo-Volcán"),("páramo","Páramo"),
-                   ("paramo","Páramo"),("cerro","Cerro"),("urbano","Urbano")]:
-        if k in tl: datos["nivel_dificultad"] = v2; break
-
-    c = re.search(r'nivel de confort[:\s]+(\d)', tl)
-    if c: datos["nivel_confort"] = f"{c.group(1)}/5"
-
-    # Especificaciones
-    for pat, key in [
-        (r'[Ee]cosistema[:\s]+([^.\n]{10,200})', "ecosistema"),
-        (r'[Cc]lima[:\s]+([^.\n]{5,150})',        "clima"),
-        (r'[Ee]levaci[oó]n[:\s]+([^.\n]{5,100})', "elevacion"),
-        (r'[Uu]bicaci[oó]n[:\s]+([^.\n]{5,200})', "ubicacion"),
-        (r'[Dd]istancia[:\s]+([^.\n]{5,100})',    "distancia"),
-    ]:
-        m = re.search(pat, tx)
-        if m: datos[key] = limpiar_texto(m.group(1))
-
-    if re.search(r'bogot[aá]', tl):    datos["ciudad_salida"] = "Bogotá"
-    elif re.search(r'medell[ií]n', tl): datos["ciudad_salida"] = "Medellín"
-
-    # Incluye / No incluye
-    for pat, key in [
-        (r'(?:el precio incluye|incluye)[:\s]+(.*?)(?=no incluye|qué no incluye|precio|fecha|itinerario|$)', 'incluye'),
-        (r'(?:no incluye|qué no incluye)[:\s]+(.*?)(?=itinerario|recomendaciones|precio|$)',                 'no_incluye'),
-    ]:
-        m2 = re.search(pat, hl, re.IGNORECASE | re.DOTALL)
-        if m2:
-            items = re.findall(r'<li[^>]*>([^<]+)|[-•✓✗]\s*([^\n<]{3,150})', m2.group(1))
-            for par in items[:10]:
-                i = limpiar_texto(par[0] or par[1])
-                if len(i) > 3 and i not in datos[key]:
-                    datos[key].append(i)
-
-    # Fechas
-    meses = {"enero":"01","febrero":"02","marzo":"03","abril":"04","mayo":"05","junio":"06",
-             "julio":"07","agosto":"08","septiembre":"09","octubre":"10","noviembre":"11","diciembre":"12"}
-    fechas = []
-    for mes in meses:
-        for m3 in re.findall(rf'(\d{{1,2}})\s+(?:de\s+)?{mes}(?:\s+(?:de\s+)?(\d{{4}}))?', tl)[:3]:
-            año = m3[1] if m3[1] else "2026"
-            f   = f"{m3[0]} de {mes} {año}"
-            if f not in fechas: fechas.append(f)
-    datos["proximas_fechas"] = fechas[:5]
-
-    # Itinerario
-    it = re.search(r'[Ii]tinerario[:\s]+(.*?)(?=[Rr]ecomendaciones|[Ii]ncluye|[Pp]recio|$)', tx, re.DOTALL)
-    if it:
-        dias = re.findall(r'[Dd][íi]a\s+\d+[:\s]+([^\n]+)', it.group(1)[:1000])
-        datos["itinerario"] = [limpiar_texto(d) for d in dias[:7]]
-
-    # Recomendaciones
-    reco = re.search(r'[Rr]ecomendaciones[:\s]+((?:[-•]\s*.+\n?){1,})', tx, re.DOTALL)
-    if reco:
-        items2 = re.findall(r'[-•]\s*(.+?)(?:\n|$)', reco.group(1))
-        datos["recomendaciones"] = [limpiar_texto(i) for i in items2[:6] if len(i.strip()) > 3]
-
-    # Cómo inscribirse
-    insc = re.search(r'c[oó]mo inscribirse[:\s]+([^.]+\.)', tx, re.IGNORECASE)
-    datos["como_inscribirse"] = limpiar_texto(insc.group(1))[:300] if insc else \
-        "Escríbenos por WhatsApp +57 300 312 7496 o info@ecoglobalexpeditions.com. Reserva con abono del 50%."
-
-    # PDF
-    pdf = re.search(r'href=["\']([^"\']+\.pdf[^"\']*)["\']', hl, re.IGNORECASE)
-    if pdf: datos["pdf_url"] = pdf.group(1)
-
-    # Descripción completa
-    desc = re.search(r'<(?:p|div)[^>]*>\s*([A-ZÁÉÍÓÚ][^<]{100,500})\s*</(?:p|div)>', hl)
-    if desc: datos["descripcion_completa"] = limpiar_texto(desc.group(1))[:500]
+            datos["precio_desde"] = int(precios[0].replace(".", "").replace(",", ""))
+        except ValueError:
+            pass
+    dur = re.search(r"(\d+)\s*d[íi]as?", region.lower())
+    if dur:
+        datos["duracion_dias"] = int(dur.group(1))
+        datos["duracion"] = f"{dur.group(1)} días"
 
     return datos
 
@@ -387,11 +386,11 @@ async def actualizar_catalogo():
         expediciones.extend(nuevos)
         print(f"\n  ✅ {len(nuevos)} planes nuevos agregados")
 
-    # PASO 1: Enriquecimiento
+    # PASO 1: Extracción fiel de cada plan
     total = len(expediciones)
-    print(f"\n📦 PASO 1 — Enriqueciendo {total} planes...")
+    print(f"\n📦 PASO 1 — Extrayendo (fiel) {total} planes...")
 
-    actualizadas = con_precio = con_fechas = 0
+    actualizadas = con_precio = con_secciones = 0
     errores = []
 
     for i, exp in enumerate(expediciones):
@@ -402,15 +401,26 @@ async def actualizar_catalogo():
         html = await get_html(url)
         if html:
             datos = extraer_datos_plan(html)
-            for k, val in datos.items():
-                if val is not None and val != [] and val != "":
-                    exp[k] = val
-            if not exp.get("descripcion") and datos.get("descripcion_completa"):
-                exp["descripcion"] = datos["descripcion_completa"]
+            # Sobrescribir con el contenido actual de la página (fiel cada corrida)
+            if datos.get("nombre"):        exp["nombre"] = datos["nombre"]
+            exp["categoria"] = inferir_categoria(url, exp.get("nombre", ""))
+            for k in ("precio_texto", "precio_desde", "duracion", "duracion_dias", "pdf_url"):
+                if datos.get(k) is not None:
+                    exp[k] = datos[k]
+            exp["detalles"] = datos.get("detalles", {})
+            # limpiar campos del esquema viejo si existían
+            for viejo in ("descripcion", "proximas_fechas", "incluye", "no_incluye",
+                          "itinerario", "recomendaciones", "nivel_dificultad",
+                          "nivel_confort", "ecosistema", "clima", "elevacion",
+                          "ubicacion", "distancia", "ciudad_salida", "atractivos",
+                          "como_inscribirse", "precio_vigencia", "descripcion_completa"):
+                exp.pop(viejo, None)
+
             actualizadas += 1
-            if datos.get("precio_texto"):    con_precio += 1
-            if datos.get("proximas_fechas"): con_fechas += 1
-            print(f"    ✅ {datos.get('precio_texto','—')} | {len(datos.get('proximas_fechas',[]))} fechas | {len(datos.get('incluye',[]))} incluye")
+            n_sec = len(exp["detalles"])
+            if datos.get("precio_texto"): con_precio += 1
+            if n_sec:                     con_secciones += 1
+            print(f"    ✅ {datos.get('precio_texto','—')} | {n_sec} secciones")
         else:
             errores.append(nombre[:40])
             print(f"    ❌ Sin contenido")
@@ -431,7 +441,7 @@ async def actualizar_catalogo():
     print(f"   Total planes:  {len(expediciones)}")
     print(f"   Actualizadas:  {actualizadas}")
     print(f"   Con precio:    {con_precio}")
-    print(f"   Con fechas:    {con_fechas}")
+    print(f"   Con secciones: {con_secciones}")
     if errores: print(f"   Errores:       {errores[:3]}")
     print(f"{'='*55}\n")
     sys.exit(0)
