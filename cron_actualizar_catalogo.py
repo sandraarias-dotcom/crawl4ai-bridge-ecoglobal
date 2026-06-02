@@ -35,6 +35,15 @@ HEADERS_HTTP = {
     "Cache-Control": "no-cache",
 }
 
+# Páginas de sistema WordPress / institucionales — nunca son planes.
+# Se filtran en el autodescubrimiento y se purgan del catálogo en cada corrida.
+PATRON_NO_PLAN = re.compile(
+    r"ecoglobalexpeditions\.com/"
+    r"(?:wp-json|wp-admin|wp-content|feed|sitemap|robots|"
+    r"politica-|terminos|privacidad|aviso-legal|cookies|condiciones-)",
+    re.IGNORECASE,
+)
+
 
 # ── GitHub helpers ───────────────────────────────────────────
 
@@ -192,6 +201,13 @@ async def descubrir_planes_nuevos(urls_actuales: set) -> list:
         f"{BASE_URL}/", f"{BASE_URL}/en/",
     }
     urls_planes = urls_sitio - excluir
+    # Descartar páginas de sistema / institucionales (wp-json, politicas, etc.)
+    descartadas = {u for u in urls_planes if PATRON_NO_PLAN.search(u)}
+    if descartadas:
+        print(f"  🚫 Descartadas (no-plan): {len(descartadas)}")
+        for u in sorted(descartadas):
+            print(f"     - {u}")
+    urls_planes = urls_planes - descartadas
     urls_nuevas = urls_planes - urls_actuales
 
     print(f"  URLs en el sitio:   {len(urls_planes)}")
@@ -351,6 +367,15 @@ async def actualizar_catalogo():
 
     catalogo     = await cargar_catalogo_github()
     expediciones = catalogo.get("expediciones", [])
+
+    # Purga auto-sanadora: elimina páginas de sistema/institucionales
+    # que se hayan colado en corridas anteriores (wp-json, politicas, etc.)
+    antes = len(expediciones)
+    expediciones = [e for e in expediciones if not PATRON_NO_PLAN.search(e.get("url", ""))]
+    purgadas = antes - len(expediciones)
+    if purgadas:
+        print(f"  🧹 Purgadas {purgadas} entradas no-plan del catálogo existente")
+
     urls_actuales = {exp["url"] for exp in expediciones}
 
     # PASO 0: Autodescubrimiento
