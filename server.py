@@ -1,6 +1,9 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v5.4.0
+server.py — Bridge MCP Ecoglobal Expeditions v5.4.1
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
+v5.4.1: fechas — si el plan NO tiene fechas publicadas ("cualquier época del
+        año"/a demanda, 96 planes), devuelve el texto TAL CUAL (copia fiel) en
+        vez del aviso de "ya pasaron". Normaliza espacios duros.
 v5.4.0: la sección "localizacion" arma el enlace de Maps al destino desde la
         "Ubicación" guardada (determinista, rápido; el agente solo releva).
 v5.3.0: la sección "fechas" se filtra en el servidor (solo vigentes; descarta
@@ -137,8 +140,9 @@ _WA_LIMITE = 3900  # margen seguro por debajo del tope de 4096 de WhatsApp
 def _a_whatsapp(texto: str) -> str:
     """Convierte el markdown del catálogo a formato WhatsApp, SIN alterar el
     contenido (no resume, no reescribe; solo cambia marcas de formato)."""
-    t = texto
+    t = texto.replace("\xa0", " ")
     t = re.sub(r"^#{1,6}\s*(.+?)\s*$", r"*\1*", t, flags=re.MULTILINE)  # ## Título -> *Título*
+    t = re.sub(r"\[([^\]]+)\]\(mailto:[^)]+\)", r"\1", t)              # [correo](mailto:) -> correo
     t = re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r"\1: \2", t)       # [texto](url) -> texto: url
     t = re.sub(r"^(\s*)[\*\-]\s+", r"\1• ", t, flags=re.MULTILINE)      # viñetas -> •
     t = re.sub(r"\*{2,}", "*", t)                                       # **/*** -> * (negrita WhatsApp)
@@ -219,14 +223,19 @@ def _localizacion_link(desc: str, nombre: str) -> str:
 
 
 def _fechas_vigentes_texto(texto: str, hoy=None) -> str:
-    """Extrae fechas 'D de MES de AAAA', descarta las vencidas y devuelve SOLO
-    las vigentes (hoy o futuras). Determinista: no depende del modelo. Si
-    ninguna sigue vigente, devuelve un mensaje claro (sin 'cupos agotados')."""
+    """Si el texto trae fechas 'D de MES de AAAA', descarta las vencidas y
+    devuelve SOLO las vigentes (o aviso si ya pasaron). Si NO trae fechas
+    (planes 'cualquier época del año' / a demanda), devuelve el texto TAL CUAL
+    (copia fiel), porque no hay nada que filtrar."""
     import datetime
     hoy = hoy or datetime.date.today()
     pat = re.compile(r"(\d{1,2})\s+de\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+de\s+(\d{4})")
+    encontradas = pat.findall(texto)
+    # Sin fechas publicadas → copia fiel (ej. "se puede realizar en cualquier época…")
+    if not encontradas:
+        return _a_whatsapp(texto)
     vig = set()
-    for d, mes, anio in pat.findall(texto):
+    for d, mes, anio in encontradas:
         m = _MESES_ES.get(_norm(mes))
         if not m:
             continue
@@ -388,7 +397,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.4.0"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.4.1"},
             "capabilities":{"tools":{}}
         }})
 
@@ -438,7 +447,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "5.4.0",
+        "name": "ecoglobal-catalogo", "version": "5.4.1",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -453,7 +462,7 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "5.4.0",
+        "version": "5.4.1",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
