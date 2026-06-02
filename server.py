@@ -1,6 +1,8 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v5.2.0
+server.py — Bridge MCP Ecoglobal Expeditions v5.3.0
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
+v5.3.0: la sección "fechas" se filtra en el servidor (solo vigentes; descarta
+        vencidas de forma determinista, sin depender del modelo).
 v5.2.0: detalle_expedicion acepta "seccion" (devuelve SOLO esa sección, ya
         formateada para WhatsApp y paginada con "parte" si es larga) para
         garantizar texto fiel sin que el modelo resuma ni exceda 4096 chars.
@@ -190,6 +192,42 @@ _TITULO_SECCION = {clave: titulo for titulo, clave in [
     ("RECOMENDACIONES", "recomendaciones"),
 ]}
 
+_MESES_ES = {
+    "enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,"julio":7,
+    "agosto":8,"septiembre":9,"setiembre":9,"octubre":10,"noviembre":11,"diciembre":12,
+}
+_MES_NOMBRE = {1:"enero",2:"febrero",3:"marzo",4:"abril",5:"mayo",6:"junio",7:"julio",
+    8:"agosto",9:"septiembre",10:"octubre",11:"noviembre",12:"diciembre"}
+
+
+def _fechas_vigentes_texto(texto: str, hoy=None) -> str:
+    """Extrae fechas 'D de MES de AAAA', descarta las vencidas y devuelve SOLO
+    las vigentes (hoy o futuras). Determinista: no depende del modelo. Si
+    ninguna sigue vigente, devuelve un mensaje claro (sin 'cupos agotados')."""
+    import datetime
+    hoy = hoy or datetime.date.today()
+    pat = re.compile(r"(\d{1,2})\s+de\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+de\s+(\d{4})")
+    vig = set()
+    for d, mes, anio in pat.findall(texto):
+        m = _MESES_ES.get(_norm(mes))
+        if not m:
+            continue
+        try:
+            f = datetime.date(int(anio), m, int(d))
+        except ValueError:
+            continue
+        if f >= hoy:
+            vig.add(f)
+    if vig:
+        lineas = ["Próximas salidas disponibles:"]
+        for f in sorted(vig):
+            lineas.append(f"• {f.day} de {_MES_NOMBRE[f.month]} de {f.year}")
+        lineas.append("\nLos cupos se confirman al inscribirse. ¿Quieres que te conecte "
+                      "con un asesor para asegurar tu cupo? 🌿")
+        return "\n".join(lineas)
+    return ("Las fechas publicadas para este plan ya pasaron. Un asesor te confirma "
+            "las próximas salidas, ¿te conecto? 🌿")
+
 
 # Orden y títulos legibles de las secciones para el detalle
 _SECCIONES_DETALLE = [
@@ -299,6 +337,10 @@ async def buscar_detalle(nombre: str, seccion: str = "", parte: int = 1) -> str:
         titulo = _TITULO_SECCION.get(clave, seccion)
         return f"La sección '{titulo}' no está disponible para este plan; ofrece consultar con un asesor."
 
+    # FECHAS: filtro determinista — solo vigentes (el modelo no es confiable en fechas)
+    if clave == "fechas":
+        return _fechas_vigentes_texto(contenido)
+
     partes = _chunk(_a_whatsapp(contenido))
     n = len(partes)
     try:    parte = int(parte)
@@ -325,7 +367,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.2.0"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.3.0"},
             "capabilities":{"tools":{}}
         }})
 
@@ -375,7 +417,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "5.2.0",
+        "name": "ecoglobal-catalogo", "version": "5.3.0",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -390,7 +432,7 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "5.2.0",
+        "version": "5.3.0",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
