@@ -1,11 +1,21 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v5.0.0
+server.py — Bridge MCP Ecoglobal Expeditions v5.1.0
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
+v5.1.0: detalle_expedicion con varias coincidencias devuelve LISTA para
+        desambiguar (ya no elige hits[0] en silencio). Búsqueda por nombre
+        normalizada sin acentos y SIN ruido de descripción.
 """
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
-import json, os, re, base64, httpx
+import json, os, re, base64, httpx, unicodedata
 from datetime import datetime, timedelta
+
+
+def _norm(s: str) -> str:
+    """minúsculas + sin acentos, para comparar nombres de forma robusta."""
+    s = unicodedata.normalize("NFKD", s or "")
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return s.lower().strip()
 
 app = FastAPI()
 
@@ -145,13 +155,17 @@ async def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str
     if categoria and categoria != "all":
         exps = [e for e in exps if e.get("categoria") == categoria]
     if busqueda:
-        t = busqueda.lower()
-        exps = [e for e in exps if t in e.get("nombre","").lower()
-                or t in (e.get("detalles", {}) or {}).get("descripcion_completa","").lower()]
+        t = _norm(busqueda)
+        # Match SOLO por nombre (normalizado sin acentos). Antes también
+        # matcheaba descripcion_completa, lo que metía ruido: planes que
+        # solo MENCIONAN el término aparecían como si fueran ese lugar.
+        exps = [e for e in exps if t in _norm(e.get("nombre", ""))]
     if not exps:
-        return f"Sin resultados para '{categoria}'."
-    total    = len(exps)
-    resultado = f"Planes disponibles ({total} total, mostrando 8):\n\n"
+        criterio = busqueda or categoria
+        return f"Sin resultados para '{criterio}'."
+    total     = len(exps)
+    mostrados = min(total, 8)
+    resultado = f"Planes disponibles ({total} total, mostrando {mostrados}):\n\n"
     for exp in exps[:8]:
         resultado += resumen_plan(exp) + "\n\n"
     return resultado.strip()
@@ -159,10 +173,28 @@ async def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str
 
 async def buscar_detalle(nombre: str) -> str:
     exps = (await cargar_catalogo()).get("expediciones", [])
-    t    = nombre.lower()
-    hits = [e for e in exps if t in e.get("nombre","").lower()]
-    if not hits: return f"No encontré '{nombre}'."
-    return detalle_plan(hits[0])
+    t    = _norm(nombre)
+    hits = [e for e in exps if t in _norm(e.get("nombre", ""))]
+    if not hits:
+        return f"No encontré ninguna expedición que coincida con '{nombre}'."
+    # Una sola coincidencia → detalle completo y fiel.
+    if len(hits) == 1:
+        return detalle_plan(hits[0])
+    # VARIAS coincidencias → NO elegir una; devolver la lista para que el
+    # agente desambigüe con el cliente. (Antes hacía detalle_plan(hits[0]),
+    # que descartaba en silencio el resto.)
+    if len(hits) > 12:
+        muestra = hits[:12]
+        cab = (f"Hay {len(hits)} planes que coinciden con '{nombre}'. "
+               f"Conviene afinar (zona o nombre más completo). Algunos:")
+    else:
+        muestra = hits
+        cab = f"Hay {len(hits)} planes que coinciden con '{nombre}'. ¿Cuál quieres?"
+    lineas = [cab]
+    for e in muestra:
+        precio = e.get("precio_texto")
+        lineas.append(f"• {e.get('nombre', '')}" + (f" — desde {precio}" if precio else ""))
+    return "\n".join(lineas)
 
 
 # ── MCP JSON-RPC 2.0 ─────────────────────────────────────────
@@ -176,7 +208,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.0.0"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.1.0"},
             "capabilities":{"tools":{}}
         }})
 
@@ -222,7 +254,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "5.0.0",
+        "name": "ecoglobal-catalogo", "version": "5.1.0",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -237,7 +269,7 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "5.0.0",
+        "version": "5.1.0",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
