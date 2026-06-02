@@ -1,7 +1,9 @@
 """
-cron_actualizar_catalogo.py — Ecoglobal Expeditions v5.0.0
+cron_actualizar_catalogo.py — Ecoglobal Expeditions v5.1.0
 Autodescubre + extrae FIEL cada sección de la página + guarda catalogo.json en GitHub.
 Extracción por secciones (HTML -> markdown -> split por encabezados H2), sin truncado.
+v5.1.0: purga auto-sanadora de fantasmas. Elimina del catálogo SOLO las URLs que el
+servidor confirma inexistentes (404/410); jamás ante timeout/conexión/5xx/403.
 El archivo es visible en:
 https://github.com/sandraarias-dotcom/crawl4ai-bridge-ecoglobal/blob/main/catalogo.json
 Railway cron: 0 8 * * * (8AM UTC = 3AM Colombia)
@@ -189,24 +191,43 @@ def inferir_categoria(url: str, nombre: str) -> str:
     return "caminatas"
 
 
-async def get_html(url: str) -> str:
+async def get_html(url: str) -> tuple[str, str]:
+    """
+    Descarga el HTML y clasifica el resultado. Devuelve (html, estado).
+
+    estado:
+      - "ok":    200 con contenido. Procesar normal.
+      - "gone":  el servidor CONFIRMA que la página no existe (404 / 410).
+                 Único caso que habilita purga del catálogo.
+      - "error": cualquier otro fallo (timeout, conexión/DNS, 403, 5xx...).
+                 Transitorio o ambiguo → NUNCA purgar; conservar lo último bueno.
+    """
     try:
         async with httpx.AsyncClient(
             timeout=20, follow_redirects=True, headers=HEADERS_HTTP
         ) as client:
             resp = await client.get(url)
+            # 404/410 = inexistencia confirmada por el servidor (tras seguir redirects)
+            if resp.status_code in (404, 410):
+                print(f"    🗑️  {resp.status_code} — página inexistente")
+                return "", "gone"
             resp.raise_for_status()
-            return resp.text
+            return resp.text, "ok"
+    except httpx.HTTPStatusError as e:
+        # 4xx (≠404/410) o 5xx: error del servidor, NO concluyente → no purgar
+        print(f"    ⚠️  HTTP {e.response.status_code} — no concluyente, se conserva")
+        return "", "error"
     except Exception as e:
+        # timeout, conexión, DNS, etc.: transitorio → no purgar
         print(f"    ⚠️  Error: {e}")
-        return ""
+        return "", "error"
 
 
 # ── PASO 0: Autodescubrimiento ───────────────────────────────
 
 async def descubrir_planes_nuevos(urls_actuales: set) -> list:
     print("\n🔍 PASO 0 — Autodescubrimiento de planes nuevos...")
-    html = await get_html(ALL_URL)
+    html, _ = await get_html(ALL_URL)
     if not html:
         print("  ❌ No se pudo acceder a /all/")
         return []
@@ -240,7 +261,12 @@ async def descubrir_planes_nuevos(urls_actuales: set) -> list:
 
     nuevos = []
     for url in urls_nuevas:
-        html_plan = await get_html(url)
+        html_plan, estado_plan = await get_html(url)
+        # Nunca dar de alta una URL que el servidor confirma inexistente:
+        # corta el problema de los fantasmas en su origen.
+        if estado_plan == "gone":
+            print(f"  🗑️  Omitida (404/410, no se agrega): {url}")
+            continue
         nombre = "Plan sin nombre"
         if html_plan:
             h1 = re.search(r'<h1[^>]*>\s*([^<]+)\s*</h1>', html_plan)
@@ -391,6 +417,7 @@ async def actualizar_catalogo():
     print(f"\n📦 PASO 1 — Extrayendo (fiel) {total} planes...")
 
     actualizadas = con_precio = con_secciones = 0
+    a_purgar = []        # índices de planes con 404/410 confirmado
     errores = []
 
     for i, exp in enumerate(expediciones):
@@ -398,7 +425,7 @@ async def actualizar_catalogo():
         nombre = exp.get("nombre", "")
         print(f"  [{i+1}/{total}] {nombre[:55]}...")
 
-        html = await get_html(url)
+        html, estado = await get_html(url)
         if html:
             datos = extraer_datos_plan(html)
             # Sobrescribir con el contenido actual de la página (fiel cada corrida)
@@ -421,11 +448,27 @@ async def actualizar_catalogo():
             if datos.get("precio_texto"): con_precio += 1
             if n_sec:                     con_secciones += 1
             print(f"    ✅ {datos.get('precio_texto','—')} | {n_sec} secciones")
+        elif estado == "gone":
+            # 404/410 confirmado → marcar para purga. NO se conserva.
+            a_purgar.append(i)
+            print(f"    🗑️  Purgada — URL inexistente (404/410)")
         else:
+            # Error transitorio/ambiguo (timeout, conexión, 5xx, 403...):
+            # se conserva el último estado bueno del catálogo.
             errores.append(nombre[:40])
-            print(f"    ❌ Sin contenido")
+            print(f"    ❌ Sin contenido (error transitorio — se conserva)")
 
         await asyncio.sleep(1.5)
+
+    # Purga de fantasmas: elimina SOLO los planes con 404/410 confirmado en esta
+    # corrida. No toca nada que haya fallado por timeout/conexión/5xx.
+    purgadas_404 = len(a_purgar)
+    if a_purgar:
+        purgar_set = set(a_purgar)
+        for j in a_purgar:
+            print(f"    🗑️  Eliminado del catálogo: {expediciones[j].get('url','')}")
+        expediciones = [e for j, e in enumerate(expediciones) if j not in purgar_set]
+        print(f"\n  🗑️  Purga 404/410: {purgadas_404} entrada(s) eliminada(s)")
 
     # PASO 2: Guardar en GitHub + disco
     print(f"\n💾 PASO 2 — Guardando catálogo en GitHub...")
@@ -442,6 +485,7 @@ async def actualizar_catalogo():
     print(f"   Actualizadas:  {actualizadas}")
     print(f"   Con precio:    {con_precio}")
     print(f"   Con secciones: {con_secciones}")
+    if purgadas_404: print(f"   Purgadas 404:  {purgadas_404}")
     if errores: print(f"   Errores:       {errores[:3]}")
     print(f"{'='*55}\n")
     sys.exit(0)
