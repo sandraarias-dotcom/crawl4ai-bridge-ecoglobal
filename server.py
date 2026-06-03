@@ -1,6 +1,11 @@
 """
-server.py — Bridge MCP Ecoglobal Expeditions v5.4.1
+server.py — Bridge MCP Ecoglobal Expeditions v5.4.3
 Lee catalogo.json desde GitHub (persistente) con caché en memoria.
+v5.4.3: listar_expediciones tolera categoría inválida (mapea "mar"/"selva"->real
+        o no filtra) en vez de devolver vacío y romper el flujo del bot.
+v5.4.2: fechas vuelve a COPIA FIEL (se retira el filtro de vigentes: rompía los
+        planes con rangos por temporada, ej. Selva en Nuquí). El aviso de asesor
+        lo maneja el prompt.
 v5.4.1: fechas — si el plan NO tiene fechas publicadas ("cualquier época del
         año"/a demanda, 96 planes), devuelve el texto TAL CUAL (copia fiel) en
         vez del aviso de "ya pasaron". Normaliza espacios duros.
@@ -121,6 +126,19 @@ TOOLS = [
         }
     }
 ]
+
+
+_CATS_REALES = {"caminatas", "destinos", "actividades"}
+_TEMA_A_CAT = {
+    "mar": "destinos", "playa": "destinos", "playas": "destinos", "selva": "destinos",
+    "desierto": "destinos", "laguna": "destinos", "lagunas": "destinos",
+    "llano": "destinos", "llanos": "destinos", "destino": "destinos",
+    "montana": "caminatas", "montanas": "caminatas", "paramo": "caminatas",
+    "paramos": "caminatas", "cerro": "caminatas", "cerros": "caminatas",
+    "cascada": "caminatas", "cascadas": "caminatas", "caminata": "caminatas",
+    "ballenas": "actividades", "rafting": "actividades", "fotografia": "actividades",
+    "astronomia": "actividades", "actividad": "actividades",
+}
 
 
 def resumen_plan(exp: dict) -> str:
@@ -293,14 +311,17 @@ def detalle_plan(exp: dict) -> str:
 
 async def buscar_expediciones(categoria: str = "all", busqueda: str = "") -> str:
     exps = (await cargar_catalogo()).get("expediciones", [])
-    if categoria and categoria != "all":
-        exps = [e for e in exps if e.get("categoria") == categoria]
     if busqueda:
+        # Un lugar/término concreto manda sobre la categoría temática: buscar
+        # por nombre en TODO el catálogo (si no, "mar"+"nuqui" se anula entre sí).
         t = _norm(busqueda)
-        # Match SOLO por nombre (normalizado sin acentos). Antes también
-        # matcheaba descripcion_completa, lo que metía ruido: planes que
-        # solo MENCIONAN el término aparecían como si fueran ese lugar.
         exps = [e for e in exps if t in _norm(e.get("nombre", ""))]
+    elif categoria and categoria != "all":
+        cn = _norm(categoria)
+        real = cn if cn in _CATS_REALES else _TEMA_A_CAT.get(cn)
+        # Categoría no reconocida (ej. "mar","selva" por error) -> no filtra.
+        if real:
+            exps = [e for e in exps if e.get("categoria") == real]
     if not exps:
         criterio = busqueda or categoria
         return f"Sin resultados para '{criterio}'."
@@ -367,10 +388,9 @@ async def buscar_detalle(nombre: str, seccion: str = "", parte: int = 1) -> str:
         titulo = _TITULO_SECCION.get(clave, seccion)
         return f"La sección '{titulo}' no está disponible para este plan; ofrece consultar con un asesor."
 
-    # FECHAS: filtro determinista — solo vigentes (el modelo no es confiable en fechas)
-    if clave == "fechas":
-        return _fechas_vigentes_texto(contenido)
-
+    # FECHAS: copia fiel como las demás secciones. (El filtro de "solo vigentes"
+    # se retiró: el catálogo usa rangos por temporada y texto libre — filtrarlo
+    # mecánicamente mangle el dato. El nudge a asesor lo da el prompt.)
     partes = _chunk(_a_whatsapp(contenido))
     n = len(partes)
     try:    parte = int(parte)
@@ -397,7 +417,7 @@ async def mcp_handler(request: Request):
     if method == "initialize":
         return JSONResponse({"jsonrpc":"2.0","id":rid,"result":{
             "protocolVersion":"2024-11-05",
-            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.4.1"},
+            "serverInfo":{"name":"ecoglobal-catalogo","version":"5.4.3"},
             "capabilities":{"tools":{}}
         }})
 
@@ -447,7 +467,7 @@ async def trigger_cron(background_tasks: BackgroundTasks):
 async def mcp_discovery():
     c = await cargar_catalogo()
     return {
-        "name": "ecoglobal-catalogo", "version": "5.4.1",
+        "name": "ecoglobal-catalogo", "version": "5.4.3",
         "total_planes": c.get("total", 0),
         "updated_at": c.get("updated_at", ""),
         "catalogo_url": GITHUB_RAW,
@@ -462,7 +482,7 @@ async def health():
     exps = c.get("expediciones", [])
     return {
         "status": "ok",
-        "version": "5.4.1",
+        "version": "5.4.3",
         "storage": "GitHub + disco local",
         "catalogo_url": GITHUB_RAW,
         "total_planes": c.get("total", 0),
